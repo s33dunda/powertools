@@ -44,3 +44,47 @@ export API_ENDPOINT=$(aws cloudformation describe-stacks --stack-name serverless
 echo "API endpoint: $API_ENDPOINT"
 curl -s -w "\nHTTP Status Code: %{http_code}\n" "$API_ENDPOINT/orders"
 curl -s -w "\nHTTP Status Code: %{http_code}\n" "$API_ENDPOINT/orders/12345"
+# Build and deploy like above
+# Create an order
+RESPONSE=$(curl -s -X POST "$API_ENDPOINT/orders" \
+-H "Content-Type: application/json" \
+-d '{
+  "customerName": "John Daves",
+  "orderStatus": "Pending",
+  "restaurantName": "Sushi Restaurant",
+  "orderItems": [
+    {"name": "Sashimi", "quantity": 1, "price": 10},
+    {"name": "Ceviche", "quantity": 1, "price": 50}
+  ],
+  "orderDate": "2024-10-30T10:00:00Z"
+}')
+
+# Print the full response body
+echo "$RESPONSE"
+
+# Extract and save the orderId to a variable
+export ORDER_ID=$(echo "$RESPONSE" | jq -r '.orderId')
+
+curl -s -w "\nHTTP Status Code: %{http_code}\n" "$API_ENDPOINT/orders"
+# Retrive our new order
+curl -s -w "\nHTTP Status Code: %{http_code}\n" "$API_ENDPOINT/orders/$ORDER_ID"
+# Update our order
+curl -s -w "\nHTTP Status Code: %{http_code}\n" \
+-X PUT "$API_ENDPOINT/orders/$ORDER_ID" \
+-H "Content-Type: application/json" \
+-d '{
+  "customerName": "Mari Lee",
+  "orderItems": [
+    {"name": "Spice tuna", "quantity": 1, "price": 1200},
+    {"name": "Soy sauce", "quantity": 2, "price": 1}
+  ],
+  "orderDate": "2024-11-01T09:30:00Z",
+  "orderStatus": "Processing"
+}'
+
+# delete the order
+curl -s -w "\nHTTP Status Code: %{http_code}\n" \
+-X DELETE "$API_ENDPOINT/orders/$ORDER_ID"
+
+# verify
+curl -s -w "\nHTTP Status Code: %{http_code}\n" "$API_ENDPOINT/orders/$ORDER_ID"

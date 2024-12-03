@@ -37,3 +37,10 @@ touch src/all_routes.py
 # Powertools can merge routes defined directly in APIGatewayRestResolver and in the Router object, applying the same precedence rules.
 # However, for better organization, we recommend choosing one approach consistently throughout your project. This helps maintain clarity
 # and reduces potential confusion in route management.
+#
+sam build
+sam deploy
+export API_ENDPOINT=$(aws cloudformation describe-stacks --stack-name serverless-api-powertools --output text --query 'Stacks[0].Outputs[?OutputKey==`PowertoolsApi`].OutputValue')
+echo "API endpoint: $API_ENDPOINT"
+curl -s -w "\nHTTP Status Code: %{http_code}\n" "$API_ENDPOINT/orders"
+curl -s -w "\nHTTP Status Code: %{http_code}\n" "$API_ENDPOINT/orders/12345"

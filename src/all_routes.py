@@ -43,3 +43,54 @@ def get_order(order_id: str):
         return json.dumps(response['Item'], cls=DecimalEncoder)
     else:
         return {"message": "Order not found"}
+
+#####
+# Create order method - all_routes.py
+#####
+@router.post("/orders")
+def create_order():
+    body = router.current_event.json_body
+    order_id = str(uuid4())
+
+    item = {
+        'orderId': order_id,
+        'customerName': body.get('customerName'),
+        "restaurantName": body.get('restaurantName'),
+        'orderItems': body.get('orderItems'),
+        'orderDate': body.get('orderDate'),
+        'orderStatus': 'Pending',
+    }
+
+    orders_table.put_item(Item=item)
+
+    return json.dumps(item, cls=DecimalEncoder)
+
+#####
+# Update order method - all_routes.py
+#####
+@router.put("/orders/<order_id>")
+def update_order(order_id: str):
+    body = router.current_event.json_body
+
+    response = orders_table.update_item(
+        Key={'orderId': order_id},
+        UpdateExpression='SET customerName = :name, orderItems = :items, orderDate = :date, orderStatus = :status',
+        ExpressionAttributeValues={
+            ':name': body.get('customerName'),
+            ':items': body.get('orderItems'),
+            ':date': body.get('orderDate'),
+            ':status': body.get('orderStatus'),
+        },
+        ReturnValues='ALL_NEW'
+    )
+
+    return json.dumps(response['Attributes'], cls=DecimalEncoder)
+
+#####
+# Delete order method - all_routes.py
+#####
+@router.delete("/orders/<order_id>")
+def delete_order(order_id: str):
+    orders_table.delete_item(Key={'orderId': order_id})
+
+    return {"message": "Order deleted"}

@@ -9,13 +9,15 @@ from aws_lambda_powertools.event_handler import (
 )
 from aws_lambda_powertools.utilities.typing import LambdaContext
 from aws_lambda_powertools.event_handler.exceptions import NotFoundError
-from aws_lambda_powertools import Logger
+from aws_lambda_powertools import Logger, Metrics, Tracer
 from all_routes import router
 
 #####
 # Classes, functions and instances - app.py
 #####
 logger = Logger()
+metrics = Metrics()
+tracer = Tracer()
 
 cors_config = CORSConfig(allow_origin="https://www.amazon.com", max_age=300)
 app = APIGatewayRestResolver(cors=cors_config)
@@ -40,5 +42,8 @@ def handle_not_found_errors(exc: NotFoundError) -> Response:
 #####
 # Lambda handler - app.py
 #####
+@logger.inject_lambda_context
+@tracer.capture_lambda_handler
+@metrics.log_metrics(capture_cold_start=True)
 def lambda_handler(event: dict, context: LambdaContext) -> dict:
     return app.resolve(event, context)

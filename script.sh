@@ -179,3 +179,16 @@ curl -s -w "\nHTTP Status Code: %{http_code}\n" \
 
 # Additionally, the AWS Console logs now indicate where the error occurred, making debugging easier and allowing for better indexing by
 # your log query tool.
+
+# Build and deploy our observability improvements
+export API_ENDPOINT=$(aws cloudformation describe-stacks --stack-name serverless-api-powertools --output text --query 'Stacks[0].Outputs[?OutputKey==`PowertoolsApi`].OutputValue')
+echo "API endpoint: $API_ENDPOINT"
+curl -s -w "\nHTTP Status Code: %{http_code}\n" "$API_ENDPOINT/orders/12345"
+# Test ^^^ and then look at cloudwatch logs
+# Cloudwatch logs insights query
+# fields @timestamp, FunctionRequestId, @message, order_id, cold_start
+# | sort @timestamp asc
+# | filter ispresent(function_request_id)
+# | limit 20
+# Goto X_RAY to the the traces
+# And goto cloudwatch metrics and see our new custom metrics for order_id

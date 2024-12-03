@@ -5,6 +5,8 @@ from http import HTTPStatus
 from uuid import uuid4
 import boto3
 import json
+from aws_lambda_powertools import Logger, Metrics, Tracer
+from aws_lambda_powertools.metrics import MetricUnit
 from aws_lambda_powertools.event_handler.api_gateway import Router
 from aws_lambda_powertools.event_handler import (
     Response,
@@ -18,6 +20,9 @@ dynamodb = boto3.resource('dynamodb')
 orders_table = dynamodb.Table('OrdersWorkshop')
 router = Router()
 
+logger = Logger()
+metrics = Metrics()
+tracer = Tracer()
 #####
 # Get all orders method - all_routes.py
 #####
@@ -41,8 +46,16 @@ def get_all_orders():
 # Get order method - all_routes.py
 #####
 @router.get("/orders/<order_id>")
+@tracer.capture_method
 def get_order(order_id: str):
     response = orders_table.get_item(Key={'orderId': order_id})
+
+    # Logging
+    logger.info("Searching an order", order_id=order_id)
+
+    # Adding metric
+    metrics.add_dimension(name="order_id", value=order_id)
+    metrics.add_metric("OrderSearch", unit=MetricUnit.Count, value=1)
 
     if 'Item' in response:
         return Response(
@@ -54,7 +67,7 @@ def get_order(order_id: str):
         return Response(
             status_code=HTTPStatus.NOT_FOUND.value,  # HTTP CODE 404
             content_type=content_types.APPLICATION_JSON,
-            body={"message": "Order not found"},
+            body={"message": "Order not found"}
         )
 
 #####

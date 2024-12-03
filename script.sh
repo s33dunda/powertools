@@ -192,3 +192,62 @@ curl -s -w "\nHTTP Status Code: %{http_code}\n" "$API_ENDPOINT/orders/12345"
 # | limit 20
 # Goto X_RAY to the the traces
 # And goto cloudwatch metrics and see our new custom metrics for order_id
+#
+
+# Build and deploy with the new authorizer
+api_id=$(aws apigateway get-rest-apis --query "items[?name=='serverless-api-powertools'].id" --output text)
+authorizer_id=$(aws apigateway get-authorizers --rest-api-id $api_id --query "items[?name=='PowertoolsFunctionAuthorizer'].id" --output text)
+aws apigateway update-authorizer --rest-api-id $api_id --authorizer-id $authorizer_id --patch-operations op=replace,path=/authorizerResultTtlInSeconds,value=0
+
+export API_ENDPOINT=$(aws cloudformation describe-stacks --stack-name serverless-api-powertools --output text --query 'Stacks[0].Outputs[?OutputKey==`PowertoolsApi`].OutputValue')
+echo "API endpoint: $API_ENDPOINT"
+
+curl -s -w "\nHTTP Status Code: %{http_code}\n" "$API_ENDPOINT/orders/12345"
+
+# Add admin user
+aws dynamodb put-item \
+    --table-name OrdersAPIPermissions \
+    --item '{
+        "userId": {"S": "Alice"},
+        "userInfo": {"S": "eyJuYW1lIjoiQWxpY2UiLCJsZXZlbCI6ImFkbWluIiwiZXhwaXJhdGlvbl9kYXRlIjoiMjAyNS0xMi0zMCJ9"}
+    }'
+
+# Add regular user
+aws dynamodb put-item \
+    --table-name OrdersAPIPermissions \
+    --item '{
+        "userId": {"S": "Bob"},
+        "userInfo": {"S": "eyJuYW1lIjoiQm9iIiwibGV2ZWwiOiJ1c2VyIiwiZXhwaXJhdGlvbl9kYXRlIjoiMjAyNS0xMi0zMCJ9"}
+    }'
+
+curl -s -w "\nHTTP Status Code: %{http_code}\n" "$API_ENDPOINT/orders/12345" -H "Authorization: eyJuYW1lIjoiQm9iIiwibGV2ZWwiOiJ1c2VyIiwiZXhwaXJhdGlvbl9kYXRlIjoiMjAyNS0xMi0zMCJ9"
+
+curl -X POST "$API_ENDPOINT/orders" \
+-H "Content-Type: application/json" \
+-H "Authorization: eyJuYW1lIjoiQm9iIiwibGV2ZWwiOiJ1c2VyIiwiZXhwaXJhdGlvbl9kYXRlIjoiMjAyNS0xMi0zMCJ9" \
+-d '{
+  "customerName": "John Daves",
+  "orderStatus": "Pending",
+  "restaurantName": "Sushi Restaurant",
+  "orderItems": [
+    {"name": "Sashimi", "quantity": 1, "price": 10},
+    {"name": "Ceviche", "quantity": 1, "price": 50}
+  ],
+  "orderDate": "2024-10-30T10:00:00Z"
+}'
+# User is not authorized? Yeah!! The API authorization is working as intended, confirming that Bob's token does not have permission to place an order.
+# Let's test Alice's admin privileges by inserting an order
+
+curl -X POST "$API_ENDPOINT/orders" \
+-H "Content-Type: application/json" \
+-H "Authorization: eyJuYW1lIjoiQWxpY2UiLCJsZXZlbCI6ImFkbWluIiwiZXhwaXJhdGlvbl9kYXRlIjoiMjAyNS0xMi0zMCJ9" \
+-d '{
+  "customerName": "John Daves",
+  "orderStatus": "Pending",
+  "restaurantName": "Sushi Restaurant",
+  "orderItems": [
+    {"name": "Sashimi", "quantity": 1, "price": 10},
+    {"name": "Ceviche", "quantity": 1, "price": 50}
+  ],
+  "orderDate": "2024-10-30T10:00:00Z"
+}'

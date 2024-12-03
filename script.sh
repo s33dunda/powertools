@@ -88,3 +88,52 @@ curl -s -w "\nHTTP Status Code: %{http_code}\n" \
 
 # verify
 curl -s -w "\nHTTP Status Code: %{http_code}\n" "$API_ENDPOINT/orders/$ORDER_ID"
+
+# Build with new response classes and auto serializing
+#
+export API_ENDPOINT=$(aws cloudformation describe-stacks --stack-name serverless-api-powertools --output text --query 'Stacks[0].Outputs[?OutputKey==`PowertoolsApi`].OutputValue')
+echo "API endpoint: $API_ENDPOINT"
+
+# Create new order
+response=$(curl -s -D - -X POST "$API_ENDPOINT/orders" \
+-H "Content-Type: application/json" \
+-d '{
+  "customerName": "John Daves",
+  "orderStatus": "Pending",
+  "restaurantName": "Sushi Restaurant",
+  "orderItems": [
+    {"name": "Sashimi", "quantity": 1, "price": 10},
+    {"name": "Ceviche", "quantity": 1, "price": 50}
+  ],
+  "orderDate": "2024-10-30T10:00:00Z"
+}')
+
+# Extract HTTP Status Code
+http_code=$(echo "$response" | grep HTTP | awk '{print $2}')
+echo "HTTP Status Code: $http_code"
+
+# Extract Location header
+location=$(echo "$response" | grep -i Location | awk '{print $2}' | tr -d '\r')
+echo "Location: $location"
+
+# Extract and print the response body
+body=$(echo "$response" | grep "orderId" )
+echo "Body: $body"
+
+# Extract and save the orderId to a variable
+export ORDER_ID=$(echo "$body" | jq -r '.orderId')
+
+# Delete
+response=$(curl -s -D - -X DELETE "$API_ENDPOINT/orders/$ORDER_ID" \
+-H "Content-Type: application/json")
+
+# Extract HTTP Status Code
+http_code=$(echo "$response" | grep HTTP | awk '{print $2}')
+echo "HTTP Status Code: $http_code"
+
+# Extract and print the response body
+body=$(echo "$response" | grep "orderId" )
+echo "Body: $body"
+
+# retrieve
+curl -s -w "\nHTTP Status Code: %{http_code}\n" "$API_ENDPOINT/orders/$ORDER_ID"

@@ -1,11 +1,15 @@
 #####
 # imports - all_routes.py
 #####
+from http import HTTPStatus
 from uuid import uuid4
 import boto3
 import json
 from aws_lambda_powertools.event_handler.api_gateway import Router
-from decimal import Decimal
+from aws_lambda_powertools.event_handler import (
+    Response,
+    content_types,
+)
 
 #####
 # Classes, functions and instances - all_routes.py
@@ -13,12 +17,6 @@ from decimal import Decimal
 dynamodb = boto3.resource('dynamodb')
 orders_table = dynamodb.Table('OrdersWorkshop')
 router = Router()
-
-class DecimalEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, Decimal):
-            return float(obj)
-        return super(DecimalEncoder, self).default(obj)
 
 #####
 # Get all orders method - all_routes.py
@@ -28,10 +26,17 @@ def get_all_orders():
     response = orders_table.scan()
 
     if len(response['Items']) > 0:
-        return json.dumps(response['Items'], cls=DecimalEncoder)
+        return Response(
+            status_code=HTTPStatus.OK.value,  # HTTP CODE 200
+            content_type=content_types.APPLICATION_JSON,
+            body=response['Items'],
+        )
     else:
-        return {"message": "No orders found"}
-
+        return Response(
+            status_code=HTTPStatus.NOT_FOUND.value,  # HTTP CODE 404
+            content_type=content_types.APPLICATION_JSON,
+            body={"message": "No orders found"},
+        )
 #####
 # Get order method - all_routes.py
 #####
@@ -40,9 +45,17 @@ def get_order(order_id: str):
     response = orders_table.get_item(Key={'orderId': order_id})
 
     if 'Item' in response:
-        return json.dumps(response['Item'], cls=DecimalEncoder)
+        return Response(
+            status_code=HTTPStatus.OK.value,  # HTTP CODE 200
+            content_type=content_types.APPLICATION_JSON,
+            body=response['Item'],
+        )
     else:
-        return {"message": "Order not found"}
+        return Response(
+            status_code=HTTPStatus.NOT_FOUND.value,  # HTTP CODE 404
+            content_type=content_types.APPLICATION_JSON,
+            body={"message": "Order not found"},
+        )
 
 #####
 # Create order method - all_routes.py
@@ -63,7 +76,12 @@ def create_order():
 
     orders_table.put_item(Item=item)
 
-    return json.dumps(item, cls=DecimalEncoder)
+    return Response(
+        status_code=HTTPStatus.CREATED.value,  # HTTP CODE 201
+        content_type=content_types.APPLICATION_JSON,
+        headers={"Location": f"/orders/{order_id}"},
+        body=item,
+    )
 
 #####
 # Update order method - all_routes.py
@@ -84,7 +102,11 @@ def update_order(order_id: str):
         ReturnValues='ALL_NEW'
     )
 
-    return json.dumps(response['Attributes'], cls=DecimalEncoder)
+    return Response(
+        status_code=HTTPStatus.OK.value,  # HTTP CODE 200
+        content_type=content_types.APPLICATION_JSON,
+        body=response['Attributes'],
+    )
 
 #####
 # Delete order method - all_routes.py
@@ -93,4 +115,7 @@ def update_order(order_id: str):
 def delete_order(order_id: str):
     orders_table.delete_item(Key={'orderId': order_id})
 
-    return {"message": "Order deleted"}
+    return Response(
+        status_code=HTTPStatus.NO_CONTENT.value,  # HTTP CODE 204
+        content_type=content_types.APPLICATION_JSON,
+    )

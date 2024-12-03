@@ -148,3 +148,21 @@ curl -I -X GET "$API_ENDPOINT/orders"
 curl -I -X GET "$API_ENDPOINT/orders" -H "Origin: https://www.amazon.com"
 # bad again
 curl -I -X GET "$API_ENDPOINT/orders" -H "Origin: https://www.invalid-site.com"
+
+
+## Introduce error handling
+curl -s -w "\nHTTP Status Code: %{http_code}\n" \
+-X POST "$API_ENDPOINT/orders" \
+-H "Content-Type: application/json" \
+-d '{"invalid json}'
+# > {"message": "Internal server error"}
+# HTTP Status Code: 502
+# Not a nice error... not sure what's wrong here'
+# Unhandled Exceptions in AWS Lambda
+# Failing to handle exceptions in AWS Lambda functions is a bad practice that can lead to some issues:
+
+# It forces AWS Lambda to restart the execution environment, as it can't determine if the error is permanent or temporary.
+# This restart can result in increased cold starts, impacting performance.
+# It may cause scaling up problems, especially under high load.
+# Unhandled exceptions can make debugging more difficult and lead to unexpected behavior.
+# Proper exception handling is crucial for maintaining the reliability and efficiency of your Lambda functions.

@@ -32,6 +32,11 @@ def handle_invalid_payload(ex: ValueError | AttributeError):
         body={"message": "Invalid request parameters. Please verify your parameters or payload according to our documentation."}
     )
 
+@app.not_found
+def handle_not_found_errors(exc: NotFoundError) -> Response:
+    logger.info(f"Route not found: {app.current_event.path}")
+    return Response(status_code=HTTPStatus.NOT_FOUND.value, content_type=content_types.TEXT_PLAIN, body="Sorry, I don't exist!")
+
 #####
 # Lambda handler - app.py
 #####

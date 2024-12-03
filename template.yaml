@@ -61,6 +61,37 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       StageName: Prod
+      Auth:
+        DefaultAuthorizer: PowertoolsFunctionAuthorizer
+        AddDefaultAuthorizerToCorsPreflight: False
+        Authorizers:
+          PowertoolsFunctionAuthorizer:
+            FunctionArn: !GetAtt PowertoolsAuthorizerFunction.Arn
+            AuthorizerResultTtlInSeconds: 0 # This disables caching for the authorizer
+
+  OrdersAPIPermissions:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: OrdersAPIPermissions
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+      BillingMode: PROVISIONED
+      ProvisionedThroughput:
+        ReadCapacityUnits: 20
+        WriteCapacityUnits: 20
+
+  PowertoolsAuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/
+      Handler: authorizer.lambda_handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OrdersAPIPermissions
 
 Outputs:
   PowertoolsApi:

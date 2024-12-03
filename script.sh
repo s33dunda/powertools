@@ -19,3 +19,10 @@ aws dynamodb put-item \
 curl -s -w "\nHTTP Status Code: %{http_code}\n" "$API_ENDPOINT/orders"
 curl -s -w "\nHTTP Status Code: %{http_code}\n" "$API_ENDPOINT/orders/12345"
 # Errors here ^ {"message": "Unsupported HTTP method"}
+# add powertools. see commits
+sam build
+sam deploy
+export API_ENDPOINT=$(aws cloudformation describe-stacks --stack-name serverless-api-powertools --output text --query 'Stacks[0].Outputs[?OutputKey==`PowertoolsApi`].OutputValue')
+echo "API endpoint: $API_ENDPOINT"
+curl -s -w "\nHTTP Status Code: %{http_code}\n" "$API_ENDPOINT/orders"
+curl -s -w "\nHTTP Status Code: %{http_code}\n" "$API_ENDPOINT/orders/12345"

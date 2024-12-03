@@ -26,50 +26,29 @@ class DecimalEncoder(json.JSONEncoder):
 #####
 # Get all orders method - app.py
 #####
-def get_all_orders(event):
+@app.get("/orders")
+def get_all_orders():
     response = orders_table.scan()
 
     if len(response['Items']) > 0:
-        return {
-            'statusCode': 200,
-            'body': json.dumps(response['Items'], cls=DecimalEncoder)
-        }
+        return json.dumps(response['Items'], cls=DecimalEncoder)
     else:
-        return {
-            'statusCode': 200,
-            'body': json.dumps({"message": "No orders found"})
-        }
+        return {"message": "No orders found"}
 
 #####
 # Get order method - app.py
 #####
-def get_order(event):
-    order_id = event['queryStringParameters']['orderId']
+@app.get("/orders/<order_id>")
+def get_order(order_id: str):
     response = orders_table.get_item(Key={'orderId': order_id})
 
     if 'Item' in response:
-        return {
-            'statusCode': 200,
-            'body': json.dumps(response['Item'], cls=DecimalEncoder)
-        }
+        return json.dumps(response['Item'], cls=DecimalEncoder)
     else:
-        return {
-            'statusCode': 200,
-            'body': json.dumps({"message": "Order not found"})
-        }
+        return {"message": "Order not found"}
 
 #####
 # Lambda handler - app.py
 #####
-def lambda_handler(event, context):
-    http_method = event['httpMethod']
-
-    if http_method == 'GET' and event["queryStringParameters"] is None and event["path"] == "/orders":
-        return get_all_orders(event)
-    if http_method == 'GET' and event["path"] == "/orders":
-        return get_order(event)
-    else:
-        return {
-            'statusCode': 400,
-            'body': json.dumps({"message": "Unsupported HTTP method"})
-        }
+def lambda_handler(event: dict, context: LambdaContext) -> dict:
+    return app.resolve(event, context)

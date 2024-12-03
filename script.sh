@@ -137,3 +137,14 @@ echo "Body: $body"
 
 # retrieve
 curl -s -w "\nHTTP Status Code: %{http_code}\n" "$API_ENDPOINT/orders/$ORDER_ID"
+
+# build and deploy CORS config
+export API_ENDPOINT=$(aws cloudformation describe-stacks --stack-name serverless-api-powertools --output text --query 'Stacks[0].Outputs[?OutputKey==`PowertoolsApi`].OutputValue')
+echo "API endpoint: $API_ENDPOINT"
+# test w/out correct origin
+curl -I -X GET "$API_ENDPOINT/orders"
+
+# test with correct
+curl -I -X GET "$API_ENDPOINT/orders" -H "Origin: https://www.amazon.com"
+# bad again
+curl -I -X GET "$API_ENDPOINT/orders" -H "Origin: https://www.invalid-site.com"

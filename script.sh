@@ -166,3 +166,16 @@ curl -s -w "\nHTTP Status Code: %{http_code}\n" \
 # It may cause scaling up problems, especially under high load.
 # Unhandled exceptions can make debugging more difficult and lead to unexpected behavior.
 # Proper exception handling is crucial for maintaining the reliability and efficiency of your Lambda functions.
+
+# build and deploy our new error handlers and test them
+export API_ENDPOINT=$(aws cloudformation describe-stacks --stack-name serverless-api-powertools --output text --query 'Stacks[0].Outputs[?OutputKey==`PowertoolsApi`].OutputValue')
+echo "API endpoint: $API_ENDPOINT"
+curl -s -w "\nHTTP Status Code: %{http_code}\n" "$API_ENDPOINT/my_orders"
+
+curl -s -w "\nHTTP Status Code: %{http_code}\n" \
+-X POST "$API_ENDPOINT/orders" \
+-H "Content-Type: application/json" \
+-d '{"invalid json}'
+
+# Additionally, the AWS Console logs now indicate where the error occurred, making debugging easier and allowing for better indexing by
+# your log query tool.

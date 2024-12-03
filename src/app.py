@@ -7,15 +7,15 @@ from boto3.dynamodb.conditions import Key
 from uuid import uuid4
 from decimal import Decimal
 
-# from aws_lambda_powertools.event_handler import APIGatewayRestResolver
-# from aws_lambda_powertools.utilities.typing.lambda_context import LambdaContext
-# app = APIGatewayRestResolver()
+from aws_lambda_powertools.event_handler import APIGatewayRestResolver
+from aws_lambda_powertools.utilities.typing.lambda_context import LambdaContext
 
 #####
 # Classes, functions and instances - app.py
 #####
 dynamodb = boto3.resource('dynamodb')
 orders_table = dynamodb.Table('OrdersWorkshop')
+app = APIGatewayRestResolver()
 
 class DecimalEncoder(json.JSONEncoder):
     def default(self, obj):
